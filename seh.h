@@ -16,11 +16,15 @@ extern sigjmp_buf seh__jmpenv;
 # define seh__setjmp() sigsetjmp(seh__jmpenv, 0)
 # endif
 
+/* Should call __leave instead */
+__seh__ void seh__leave(void);
+
 /* The syntax */
 
 # define __try          if (seh__setjmp() == 0)
 # define __except(cond) else if (cond)
-# define __finally      else
+# define __finally      
+# define __leave        seh__leave()
 #endif /* !defined(_MSC_VER) */
 
 /**
@@ -29,6 +33,7 @@ extern sigjmp_buf seh__jmpenv;
 enum
 {
     SEH_EXCODE_NONE,
+    SEH_EXCODE_LEAVE,
     SEH_EXCODE_ABORT,
     SEH_EXCODE_FLOAT,
     SEH_EXCODE_SYSCALL,
@@ -59,20 +64,11 @@ __seh__ int  seh_get_excode(void);
 
 static int seh__excode = SEH_EXCODE_NONE;
 
-#if defined(_MSV_VER)
-int seh_init(void)
+#if defined(_WIN32)
+#include <Windows.h>
+static void seh__filter(int excode)
 {
-    return SEH_INIT_SUCCESS;
-}
-
-void seh_quit(void)
-{
-
-}
-
-int seh_get_excode(void)
-{
-    switch (GetExceptionCode())
+    switch (excode)
     {
     case EXCEPTION_FLT_OVERFLOW:
     case EXCEPTION_FLT_UNDERFLOW:
@@ -108,8 +104,23 @@ int seh_get_excode(void)
 	seh__excode = SEH_EXCODE_NONE;
 	break;
     }
-    
+}
+#endif
+
+#if defined(_MSV_VER)
+int seh_init(void)
+{
+    return SEH_INIT_SUCCESS;
+}
+
+void seh_quit(void)
+{
+    seh__filter(GetExceptionCode());
     return seh__excode;
+}
+
+int seh_get_excode(void)
+{
 }
 #else
 
@@ -117,7 +128,6 @@ int seh_get_excode(void)
 
 # if defined(_WIN32)
 jmp_buf seh__jmpenv;
-const int seh__signals[] = { SIGABRT, SIGFPE, SIGSEGV, SIGILL };
 # define seh__longjmp() longjmp(seh__jmpenv, seh__excode)
 # else
 sigjmp_buf seh__jmpenv;
@@ -127,11 +137,31 @@ const int seh__signals[] = {
 # define seh__longjmp() siglongjmp(seh__jmpenv, seh__excode)
 # endif
 
-static void seh__sighandler(int sig)
+#if defined(_WIN32)
+static LONG WINAPI seh__sighandler(EXCEPTION_POINTERS* info)
 {
+    seh__filter(info->ExceptionRecord->ExceptionCode);
+    seh__longjmp();
+    return seh__excode;
+}
+
+int seh_init(void)
+{
+    SetUnhandledExceptionFilter(seh__sighandler);
+    return SEH_INIT_SUCCESS;
+}
+
+void seh_quit(void)
+{
+    SetUnhandledExceptionFilter(NULL);
+}
+#else
+static void seh__sighandler(int sig, siginfo_t* info, void* context)
+{
+    (void)info;
+    (void)context;
     switch (sig)
     {
-#if !defined(_WIN32)
     case SIGBUS:
 	seh__excode = SEH_EXCODE_MISALIGN;
 	break;
@@ -139,7 +169,6 @@ static void seh__sighandler(int sig)
     case SIGSYS:
 	seh__excode = SEH_EXCODE_SYSCALL;
 	break;
-#endif
 
     case SIGFPE:
 	seh__excode = SEH_EXCODE_FLOAT;
@@ -168,9 +197,14 @@ static void seh__sighandler(int sig)
 int seh_init(void)
 {
     int idx;
+    struct sigaction sa;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_handler   = NULL;
+    sa.sa_sigaction = seh__sighandler;
+    sa.sa_flags     = SA_SIGINFO | SA_RESTART | SA_NODEFER;
     for (idx = 0; idx < seh__countof(seh__signals); idx++)
     {
-	if (signal(seh__signals[idx], seh__sighandler))
+	if (sigaction(seh__signals[idx], &sa, NULL))
 	{
 	    return SEH_INIT_SIGNAL_FAILED;
 	}
@@ -189,10 +223,17 @@ void seh_quit(void)
 	}
     }
 }
+#endif
 
 int seh_get_excode(void)
 {
     return seh__excode;
+}
+
+void seh__leave(void)
+{
+    seh__excode = SEH_EXCODE_LEAVE;
+    seh__longjmp();
 }
 #endif /* defined(_MSC_VER) */
 

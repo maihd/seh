@@ -11,33 +11,26 @@ int main(int argc, char* argv[])
 	return 1;
     }
 
-    __try
+    int count = 100;
+    while (count-- > 0)
     {
-	int* ptr = NULL;
-	*ptr = 0; /* Throw exception here */
-    }
-    __except (seh_get_excode() != SEH_EXCODE_NONE)
-    {
-	fprintf(stderr, "Segment fault exception has been thrown\n");
-    }
-    __finally
-    {
-	fprintf(stderr, "An unknown exception has been thrown\n"); 	
-    }
+        __try
+	{
+	    int* ptr = NULL;
+	    *ptr = 0; /* Throw exception here */
+	}
+	__except (seh_get_excode() == SEH_EXCODE_SEGFAULT)
+	{
+	    fprintf(stderr, "Segment fault exception has been thrown\n");
+	}
+	__except (seh_get_excode() > SEH_EXCODE_LEAVE) /* Ignore __leave */
+	{
+	    fprintf(stderr, "An unknown exception has been thrown\n"); 	
+	}
+	__finally
+	{
 
-    /* @note: when try in seconds, software may be pause, fixing... */
-    __try
-    {
-	int* ptr = NULL;
-	*ptr = 0; /* Throw exception here */
-    }
-    __except (seh_get_excode() != SEH_EXCODE_NONE)
-    {
-	fprintf(stderr, "Segment fault exception has been thrown\n");
-    }
-    __finally
-    {
-	fprintf(stderr, "An unknown exception has been thrown\n"); 	
+	}
     }
     
     seh_quit();
