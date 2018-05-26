@@ -9,21 +9,24 @@
 # include <setjmp.h>
 
 # if defined(_WIN32)
-extern jmp_buf seh__jmpenv;
-# define seh__setjmp() setjmp(seh__jmpenv)
+# define seh__jmpbuf_t  jmp_buf
+# define seh__setjmp(x) setjmp(x)
 # else
-extern sigjmp_buf seh__jmpenv;
-# define seh__setjmp() sigsetjmp(seh__jmpenv, 0)
+# define seh__jmpbuf_t  sigjmp_buf
+# define seh__setjmp(x) sigsetjmp(x, 0)
 # endif
-
-/* Should call __leave instead */
-__seh__ void seh__leave(void);
 
 /* The syntax */
 
-# define __try          if (seh__setjmp() == 0)
+# define __concat_in(a, b) a ## b
+# define __concat(a, b) __concat_in(a, b)
+# define __try								\
+    seh__jmpbuf_t __concat(seh__env, __LINE__);				\
+    seh__begin(& __concat(seh__env, __LINE__));				\
+    if (seh__setjmp(__concat(seh__env, __LINE__)) == 0)
+
 # define __except(cond) else if (cond)
-# define __finally      
+# define __finally      seh__end();     
 # define __leave        seh__leave()
 #endif /* !defined(_MSC_VER) */
 
@@ -57,12 +60,43 @@ __seh__ int  seh_init(void);
 __seh__ void set_quit(void);
 __seh__ int  seh_get_excode(void);
 
+#ifndef _MSC_VER
+__seh__ void seh__begin(seh__jmpbuf_t* env);
+__seh__ void seh__end(void);
+/* Should use __leave statement instead */
+__seh__ void seh__leave(void);
+#endif
+
 #endif /* __SEH_H__ */
 
 
 #if defined(SEH_IMPL)
 
+#include <stdio.h>
+#include <stdlib.h>
+
+#ifndef seh__assert
+#define seh__assert(exp, msg, ...)					\
+    do {								\
+	if (!(exp)) {							\
+	    fprintf(stderr,						\
+		    "Assertion failed: " #exp ".\n\t" msg,		\
+		    ##__VA_ARGS__);					\
+	    exit(1);							\
+	}								\
+    } while (0)						
+#endif
+
+#ifdef  NDEBUG
+#undef  seh__assert
+#define seh__assert(...) do { } while (0)
+#endif
+
+#define SEH__MAXENV 128
+
 static int seh__excode = SEH_EXCODE_NONE;
+static int seh__envidx = -1;
+static seh__jmpbuf_t* seh__envs[SEH__MAXENV];
 
 #if defined(_WIN32)
 #include <Windows.h>
@@ -127,14 +161,21 @@ int seh_get_excode(void)
 # define seh__countof(x) (sizeof(x) / sizeof((x)[0]))
 
 # if defined(_WIN32)
-jmp_buf seh__jmpenv;
-# define seh__longjmp() longjmp(seh__jmpenv, seh__excode)
+static void seh__longjmp(void)
+{
+    seh__jmpbuf_t* env = seh__envs[seh__envidx];
+    longjmp(*env, seh__excode);
+}
 # else
-sigjmp_buf seh__jmpenv;
 const int seh__signals[] = {
     SIGABRT, SIGFPE, SIGSEGV, SIGILL, SIGSYS, SIGBUS,
 };
-# define seh__longjmp() siglongjmp(seh__jmpenv, seh__excode)
+
+static void seh__longjmp(void)
+{
+    seh__jmpbuf_t* env = seh__envs[seh__envidx];
+    siglongjmp(*env, seh__excode);
+}
 # endif
 
 #if defined(_WIN32)
@@ -142,7 +183,8 @@ static LONG WINAPI seh__sighandler(EXCEPTION_POINTERS* info)
 {
     seh__filter(info->ExceptionRecord->ExceptionCode);
     seh__longjmp();
-    return seh__excode;
+    return seh__excode > SEH__EXCODE_LEAVE ?
+	EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
 }
 
 int seh_init(void)
@@ -234,6 +276,26 @@ void seh__leave(void)
 {
     seh__excode = SEH_EXCODE_LEAVE;
     seh__longjmp();
+}
+
+void seh__begin(seh__jmpbuf_t* env)
+{
+    seh__assert(env != NULL,
+		"env must not be null. Are you attempting call by hand?");
+    seh__assert(seh__envidx < SEH__MAXENV - 1,
+		"Many __try statements are nesting too depth");
+    seh__envs[++seh__envidx] = env;
+}
+
+void seh__end(void)
+{
+    seh__assert(seh__envidx >= 0,
+		"There is no __try statements are in action. "
+		"Possible have wild __finally or call seh__end() by hand.");
+    if (seh__envidx >= 0)
+    {
+	seh__envidx--;
+    }
 }
 #endif /* defined(_MSC_VER) */
 

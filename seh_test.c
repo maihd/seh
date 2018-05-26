@@ -29,8 +29,9 @@ int main(int argc, char* argv[])
 	}
 	__finally
 	{
-
+	    printf("Finally of try/except\n");
 	}
+	__finally
     }
     
     seh_quit();
