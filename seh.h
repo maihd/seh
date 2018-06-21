@@ -30,6 +30,10 @@
 # define __leave        seh__leave()
 #endif /* !defined(_MSC_VER) */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Exception code
  */
@@ -61,12 +65,18 @@ __seh__ void set_quit(void);
 __seh__ int  seh_get_excode(void);
 
 #ifndef _MSC_VER
+/* Belove functions support not be called by hand */
+    
 __seh__ void seh__begin(seh__jmpbuf_t* env);
 __seh__ void seh__end(void);
-/* Should use __leave statement instead */
 __seh__ void seh__leave(void);
 #endif
 
+/* END OF EXTERN "C" */
+#ifdef __cplusplus
+}
+#endif
+    
 #endif /* __SEH_H__ */
 
 
