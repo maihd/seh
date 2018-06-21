@@ -15,23 +15,23 @@ int main(int argc, char* argv[])
     while (count-- > 0)
     {
         __try
-	{
-	    int* ptr = NULL;
-	    *ptr = 0; /* Throw exception here */
-	}
-	__except (seh_get_excode() == SEH_EXCODE_SEGFAULT)
-	{
-	    fprintf(stderr, "Segment fault exception has been thrown\n");
-	}
-	__except (seh_get_excode() > SEH_EXCODE_LEAVE) /* Ignore __leave */
-	{
-	    fprintf(stderr, "An unknown exception has been thrown\n"); 	
-	}
-	__finally
-	{
-	    printf("Finally of try/except\n");
-	}
-	__finally
+		{
+			int* ptr = NULL;
+			*ptr = 0; /* Throw exception here */
+		}
+		__except (seh_get_excode() == SEH_EXCODE_SEGFAULT)
+		{
+			fprintf(stderr, "Segment fault exception has been thrown\n");
+		}
+		__except (seh_get_excode() > SEH_EXCODE_LEAVE) /* Ignore __leave */
+		{
+			fprintf(stderr, "An unknown exception has been thrown\n"); 	
+		}
+		__finally
+		{
+			printf("Finally of try/except\n");
+		}
+		__finally /* Assertion failed here */
     }
     
     seh_quit();

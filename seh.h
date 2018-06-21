@@ -20,9 +20,9 @@
 
 # define __concat_in(a, b) a ## b
 # define __concat(a, b) __concat_in(a, b)
-# define __try								\
-    seh__jmpbuf_t __concat(seh__env, __LINE__);				\
-    seh__begin(& __concat(seh__env, __LINE__));				\
+# define __try                                              \
+    seh__jmpbuf_t __concat(seh__env, __LINE__);             \
+    seh__begin(& __concat(seh__env, __LINE__));             \
     if (seh__setjmp(__concat(seh__env, __LINE__)) == 0)
 
 # define __except(cond) else if (cond)
@@ -86,20 +86,20 @@ __seh__ void seh__leave(void);
 #include <stdlib.h>
 
 #ifndef seh__assert
-#define seh__assert(exp, msg, ...)					\
-    do {								\
-	if (!(exp)) {							\
-	    fprintf(stderr,						\
-		    "Assertion failed: " #exp ".\n\t" msg,		\
-		    ##__VA_ARGS__);					\
-	    exit(1);							\
-	}								\
+#define seh__assert(exp, msg, ...)                          \
+    do {                                                    \
+        if (!(exp)) {                                       \
+            fprintf(stderr,                                 \
+                "Assertion failed: " #exp ".\n\t" msg,      \
+                ##__VA_ARGS__);                             \
+            exit(1);                                        \
+        }                                                   \
     } while (0)						
 #endif
 
 #ifdef  NDEBUG
 #undef  seh__assert
-#define seh__assert(...) do { } while (0)
+#define seh__assert(...) ((void)0)
 #endif
 
 #define SEH__MAXENV 128
@@ -121,32 +121,32 @@ static void seh__filter(int excode)
     case EXCEPTION_FLT_INEXACT_RESULT:
     case EXCEPTION_FLT_DENORMAL_OPERAND:
     case EXCEPTION_FLT_INVALID_OPERATION:
-	seh__excode = SEH_EXCODE_FLOAT;
-	break;
+        seh__excode = SEH_EXCODE_FLOAT;
+        break;
 
     case EXCEPTION_ILLEGAL_INSTRUCTION:
-	seh__excode = SEH_EXCODE_ILLCODE;
-	break;
+        seh__excode = SEH_EXCODE_ILLCODE;
+        break;
 
     case EXCEPTION_STACK_OVERFLOW:
-	seh__excode = SEH_EXCODE_STACKOVERFLOW;
-	break;
+        seh__excode = SEH_EXCODE_STACKOVERFLOW;
+        break;
 	
     case EXCEPTION_ACCESS_VIOLATION:
-	seh__excode = SEH_EXCODE_SEGFAULT;
-	break;
+        seh__excode = SEH_EXCODE_SEGFAULT;
+        break;
 	
     case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
-	seh__excode = SEH_EXCODE_OUTBOUNDS;
-	break;
+        seh__excode = SEH_EXCODE_OUTBOUNDS;
+        break;
 
     case EXCEPTION_DATATYPE_MISALIGNMENT:
-	seh__excode = SEH_EXCODE_MISALIGN;
-	break;
+        seh__excode = SEH_EXCODE_MISALIGN;
+        break;
 	
     default:
-	seh__excode = SEH_EXCODE_NONE;
-	break;
+        seh__excode = SEH_EXCODE_NONE;
+        break;
     }
 }
 #endif
@@ -193,8 +193,9 @@ static LONG WINAPI seh__sighandler(EXCEPTION_POINTERS* info)
 {
     seh__filter(info->ExceptionRecord->ExceptionCode);
     seh__longjmp();
-    return seh__excode > SEH__EXCODE_LEAVE ?
-	EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
+    return seh__excode > SEH__EXCODE_LEAVE 
+        ? EXCEPTION_CONTINUE_EXECUTION 
+        : EXCEPTION_CONTINUE_SEARCH;
 }
 
 int seh_init(void)
@@ -215,32 +216,32 @@ static void seh__sighandler(int sig, siginfo_t* info, void* context)
     switch (sig)
     {
     case SIGBUS:
-	seh__excode = SEH_EXCODE_MISALIGN;
-	break;
+        seh__excode = SEH_EXCODE_MISALIGN;
+        break;
 
     case SIGSYS:
-	seh__excode = SEH_EXCODE_SYSCALL;
-	break;
+        seh__excode = SEH_EXCODE_SYSCALL;
+        break;
 
     case SIGFPE:
-	seh__excode = SEH_EXCODE_FLOAT;
-	break;
+        seh__excode = SEH_EXCODE_FLOAT;
+        break;
 	
     case SIGILL:
-	seh__excode = SEH_EXCODE_ILLCODE;
-	break;
+        seh__excode = SEH_EXCODE_ILLCODE;
+        break;
 
     case SIGABRT:
-	seh__excode = SEH_EXCODE_ABORT;
-	break;
+        seh__excode = SEH_EXCODE_ABORT;
+        break;
 
     case SIGSEGV:
-	seh__excode = SEH_EXCODE_SEGFAULT;
-	break;
+        seh__excode = SEH_EXCODE_SEGFAULT;
+        break;
 	
     default:
-	seh__excode = SEH_EXCODE_NONE;
-	break;
+        seh__excode = SEH_EXCODE_NONE;
+        break;
     }
 
     seh__longjmp();
@@ -256,10 +257,10 @@ int seh_init(void)
     sa.sa_flags     = SA_SIGINFO | SA_RESTART | SA_NODEFER;
     for (idx = 0; idx < seh__countof(seh__signals); idx++)
     {
-	if (sigaction(seh__signals[idx], &sa, NULL))
-	{
-	    return SEH_INIT_SIGNAL_FAILED;
-	}
+        if (sigaction(seh__signals[idx], &sa, NULL))
+        {
+            return SEH_INIT_SIGNAL_FAILED;
+        }
     }
     return SEH_INIT_SUCCESS;
 }
@@ -269,10 +270,10 @@ void seh_quit(void)
     int idx;
     for (idx = 0; idx < seh__countof(seh__signals); idx++)
     {
-	if (signal(seh__signals[idx], SIG_DFL))
-	{
-	    break;
-	}
+        if (signal(seh__signals[idx], SIG_DFL))
+        {
+            break;
+        }
     }
 }
 #endif
