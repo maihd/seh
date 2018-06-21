@@ -149,12 +149,12 @@ int seh_init(void)
 
 void seh_quit(void)
 {
-    seh__filter(GetExceptionCode());
-    return seh__excode;
 }
 
 int seh_get_excode(void)
 {
+    seh__filter(GetExceptionCode());
+    return seh__excode;
 }
 #else
 
