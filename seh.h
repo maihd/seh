@@ -30,6 +30,10 @@
 # define __leave        seh__leave()
 #endif /* !defined(_MSC_VER) */
 
+#ifndef SEH_LEAVE_VALUE
+#define SEH_LEAVE_VALUE -9999 // SHARE with seh.h
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -65,7 +69,7 @@ __seh__ void set_quit(void);
 __seh__ int  seh_get_excode(void);
 
 #ifndef _MSC_VER
-/* Belove functions support not be called by hand */
+/* Below functions support not be called by hand */
     
 __seh__ void seh__begin(seh__jmpbuf_t* env);
 __seh__ void seh__end(void);
