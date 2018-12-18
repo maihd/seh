@@ -67,30 +67,37 @@ static LONG WINAPI seh__sighandler(EXCEPTION_POINTERS* info)
     case EXCEPTION_FLT_DENORMAL_OPERAND:
     case EXCEPTION_FLT_INVALID_OPERATION:
         seh_throw(SEH_FLOAT);
+        //seh_value = SEH_FLOAT;
         break;
 
     case EXCEPTION_ILLEGAL_INSTRUCTION:
         seh_throw(SEH_ILLCODE);
+        //seh_value = SEH_ILLCODE;
         break;
 
     case EXCEPTION_STACK_OVERFLOW:
         seh_throw(SEH_STACKOVERFLOW);
+        //seh_value = SEH_STACKOVERFLOW;
         break;
 	
     case EXCEPTION_ACCESS_VIOLATION:
         seh_throw(SEH_SEGFAULT);
+        //seh_value = SEH_SEGFAULT;
         break;
 	
     case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
         seh_throw(SEH_OUTBOUNDS);
+        //seh_value = SEH_OUTBOUNDS;
         break;
 
     case EXCEPTION_DATATYPE_MISALIGNMENT:
         seh_throw(SEH_MISALIGN);
+        //seh_value = SEH_MISALIGN;
         break;
 	
     default:
         seh_throw(SEH_NONE);
+        //seh_value = SEH_NONE;
         break;
     }
 
@@ -149,7 +156,7 @@ void seh_leave(void)
 void seh_throw(int value)
 {
     seh_value = value;
-    seh_t* ctx = seh_stack[--seh_stack_pointer];
+    seh_t* ctx = seh_stack[seh_stack_pointer - 1];
     longjmp(ctx->jmpbuf, 1);
 }
 
