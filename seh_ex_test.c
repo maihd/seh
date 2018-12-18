@@ -5,7 +5,7 @@
 
 int main(int argc, char* argv[])
 {
-    seh_ctx_t ctx; 
+    seh_t ctx; 
     seh_try (ctx)
     {
         printf("prepare to throw an error\n");

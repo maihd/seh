@@ -51,7 +51,4 @@ seh_finally (ctx) /* Must has __finally */
 {
     /* @TODO: finally code after __try/__except */
 }
-
-...
-seh_quit(); /* release seh's memory usage */
 ```
