@@ -6,34 +6,24 @@
 
 int main(int argc, char* argv[])
 {
-    if (seh_init() != SEH_INIT_SUCCESS)
-    {
-	return 1;
-    }
-
     int count = 100;
     while (count-- > 0)
     {
-        __try
+		seh_t seh;
+        seh_try (seh)
 		{
 			int* ptr = NULL;
 			*ptr = 0; /* Throw exception here */
 		}
-		__except (seh_get_excode() == SEH_EXCODE_SEGFAULT)
+		seh_catch (seh_get() == SEH_SEGFAULT)
 		{
 			fprintf(stderr, "Segment fault exception has been thrown\n");
 		}
-		__except (seh_get_excode() > SEH_EXCODE_LEAVE) /* Ignore __leave */
+		seh_finally (seh)
 		{
-			fprintf(stderr, "An unknown exception has been thrown\n"); 	
+			printf("Finally of try/catch\n");
 		}
-		__finally
-		{
-			printf("Finally of try/except\n");
-		}
-		__finally /* Assertion failed here */
     }
     
-    seh_quit();
     return 0;
 }
