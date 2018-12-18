@@ -1,4 +1,3 @@
-#include "seh.h"
 #include <stdio.h>
 
 #define SEH_IMPL

@@ -1,54 +1,44 @@
 # Introduction
 Simple and cross-compiler 'Structured Exception Handling' for C/C++
 
+## Versions
+1. seh.h: Exception handler that fully listenning on system signal and custom
+2. seh_lite.h: Exception handler without listenning on system signal
+
 ## Examples 
 seh.h:
 ```C
-if (seh_init() != SEH_INIT_SUCCESS)
-{
-    /* init failed */
-}
-...
-__try
+seh_t seh;
+seh_try (seh)
 {
     int* ptr = NULL;
-    *ptr = 0;
+    *ptr = 0; /* Throw exception here */
 }
-__except (seh_get_excode() == SEH_EXCODE_SEGFAULT)
+seh_catch (seh_get() == SEH_SEGFAULT)
 {
-    /* Reach here */
+    fprintf(stderr, "Segment fault exception has been thrown\n");
 }
-__except (seh_get_excode() > SEH_EXCODE_LEAVE)
+seh_finally (seh)
 {
-    /* Never reached */
+    printf("Finally of try/catch\n");
 }
-__finally /* Must has __finally */
-{
-    /* @TODO: finally code after __try/__except */
-}
-
-...
-seh_quit(); /* release seh's memory usage */
 ```
 
-seh_ex.h
+seh_lite.h
 ```C
-seh_ctx_t ctx;
-seh_try (ctx)
+seh_lite_t ctx; 
+seh_lite_try (ctx)
 {
-    ...
-    seh_throw(1);
+    printf("prepare to throw an error\n");
+    seh_lite_throw(1);
+    printf("should not should this\n");
 }
-seh_catch (seh_get() == 1)
+seh_lite_catch (seh_lite_get() == 1)
 {
-    /* Reach here */
+    printf("catch an error that threw with value=1.\n");
 }
-seh_catch (seh_get() == 2)
+seh_lite_finally (ctx)
 {
-    /* Never reached */
-}
-seh_finally (ctx) /* Must has __finally */
-{
-    /* @TODO: finally code after __try/__except */
+    printf("finally we done.\n");
 }
 ```
