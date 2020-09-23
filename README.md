@@ -1,5 +1,5 @@
 # Introduction
-Simple and cross-compiler 'Structured Exception Handling' for C/C++
+Simple and cross-compiler [Structured Exception Handling](https://docs.microsoft.com/en-us/cpp/cpp/structured-exception-handling-c-cpp?view=vs-2019) for C/C++
 
 ## Versions
 1. seh.h: Exception handler that fully listenning on system signal and custom
