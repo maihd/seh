@@ -13,11 +13,10 @@
 
 typedef jmp_buf seh_lite_t;
 
-#define seh_lite_try(ctx)     seh_lite__push(&ctx); if (setjmp(ctx) == 0)
-#define seh_lite_leave()      seh_lite_throw(SEH_LEAVE)
-#define seh_lite_catch(exp)   else if ((seh_lite_get() != SEH_LEAVE) && (exp))
-#define seh_lite_finally(ctx) seh_lite__pop(&ctx);
-//#define seh_throw(i)     cur_value = i; longjmp(ctx, 1)
+#define seh_lite_try(ctx)       seh_lite__push(&ctx); if (setjmp(ctx) == 0)
+#define seh_lite_leave()        seh_lite_throw(SEH_LEAVE)
+#define seh_lite_catch(exp)     else if ((seh_lite_get() != SEH_LEAVE) && (exp))
+#define seh_lite_finally(ctx)   seh_lite__pop(&ctx);
 
 SEH_LITE_API int  seh_lite_get(void);
 SEH_LITE_API void seh_lite_throw(int value);
