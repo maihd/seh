@@ -2,10 +2,10 @@ package seh
 
 import "core:testing"
 import "core:mem"
-import "core:fmt"
 
 import c "core:c/libc"
 import posix "core:sys/posix"
+import windows "core:sys/windows"
 
 Exception_Code :: enum {
     None,
@@ -24,30 +24,108 @@ SEH_Context :: struct {
 }
 
 when ODIN_OS == .Windows {
-    #panic("SEH on Windows does not implemented yet!")
+    @(private = "file")
+    SEH_Context_Data :: struct {
+        code: Exception_Code,
+        // prev: ^SEH_Context_Data,
+        saved: windows.LPTOP_LEVEL_EXCEPTION_FILTER,
+        jmpbuf: c.jmp_buf,
+    }
+
+    CONTEXTS_NUM :: #config(CONTEXTS_NUM, 64)
+    contexts : [CONTEXTS_NUM]SEH_Context_Data
+
+    @(private = "file")
+    curr_index : int
+
+    begin :: proc() -> ^SEH_Context {
+        assert(curr_index < len(contexts))
+
+        ctx := &contexts[curr_index]
+        ctx.code = .None
+        ctx.saved = windows.SetUnhandledExceptionFilter(sighandler)
+
+        curr_index += 1
+        c.setjmp(&ctx.jmpbuf)
+
+        return transmute(^SEH_Context)ctx
+    }
+
+    @(private = "file")
+    sighandler :: proc "system" (info: ^windows.EXCEPTION_POINTERS) -> windows.LONG {
+        switch info.ExceptionRecord.ExceptionCode {
+        case windows.EXCEPTION_FLT_OVERFLOW:
+        case windows.EXCEPTION_FLT_UNDERFLOW:
+        case windows.EXCEPTION_FLT_STACK_CHECK:
+        case windows.EXCEPTION_FLT_DIVIDE_BY_ZERO:
+        case windows.EXCEPTION_FLT_INEXACT_RESULT:
+        case windows.EXCEPTION_FLT_DENORMAL_OPERAND:
+        case windows.EXCEPTION_FLT_INVALID_OPERATION:
+            throw(.Float);
+
+        case windows.EXCEPTION_ILLEGAL_INSTRUCTION:
+            throw(.Illegal_Code)
+
+        case windows.EXCEPTION_STACK_OVERFLOW:
+            throw(.Stack_Overflow);
+
+        case windows.EXCEPTION_ACCESS_VIOLATION:
+            throw(.Segment_Fault);
+        
+        case windows.EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+            throw(.Out_Of_Bounds);
+
+        case windows.EXCEPTION_DATATYPE_MISALIGNMENT:
+            throw(.Misalignment);
+        
+        case:
+            throw(.None);
+        }
+
+        return windows.EXCEPTION_CONTINUE_EXECUTION
+    }
+
+    end :: proc(ctx: ^SEH_Context) {
+        ctx := transmute(^SEH_Context_Data)ctx
+
+        if &contexts[curr_index - 1] == ctx {
+            windows.SetUnhandledExceptionFilter(ctx.saved)
+            curr_index -= 1
+        }
+    }
+
+    throw :: proc "c" (code: Exception_Code) {
+        curr := &contexts[curr_index]
+        if curr != nil {
+            curr.code = code
+            c.longjmp(&curr.jmpbuf, 1)
+        }
+    }
 } else {
     @(private = "file")
     SEH_Context_Data :: struct {
         code: Exception_Code,
-        prev: ^SEH_Context_Data,
-        saved: [^]posix.sigaction_t,
+        // prev: ^SEH_Context_Data,
+        saved: [len(signals)]posix.sigaction_t,
         jmpbuf: c.jmp_buf,
     }
 
     @(private = "file")
-    signals := []posix.Signal{ 
+    signals := [?]posix.Signal{ 
         .SIGABRT, .SIGFPE, .SIGSEGV, .SIGILL, .SIGSYS, .SIGBUS,
     }
 
+    CONTEXTS_NUM :: #config(CONTEXTS_NUM, 64)
+    contexts : [CONTEXTS_NUM]SEH_Context_Data
+
     @(private = "file")
-    curr : ^SEH_Context_Data
+    curr_index : int
 
     begin :: proc() -> ^SEH_Context {
-        ctx := cast(^SEH_Context_Data)make([^]u8, size_of(SEH_Context_Data) + size_of(posix.sigaction_t) * len(signals))
+        assert(curr_index < len(contexts))
 
-        ctx.prev = nil
+        ctx := &contexts[curr_index]
         ctx.code = .None
-        ctx.saved = cast([^]posix.sigaction_t)mem.ptr_offset(cast([^]u8)ctx, size_of(SEH_Context_Data))
         
         sa := posix.sigaction_t{
             sa_sigaction = sighandler,
@@ -62,9 +140,7 @@ when ODIN_OS == .Windows {
             }
         }
 
-        ctx.prev = curr
-        curr = ctx
-
+        curr_index += 1
         c.setjmp(&ctx.jmpbuf)
 
         return transmute(^SEH_Context)ctx
@@ -73,20 +149,20 @@ when ODIN_OS == .Windows {
     end :: proc(ctx: ^SEH_Context) {
         ctx := transmute(^SEH_Context_Data)ctx
 
-        if curr == ctx {
-            for i in 0..<len(signals) {
-                if posix.sigaction(signals[i], &ctx.saved[i], &ctx.prev.saved[i]) != .OK {
-                    free(ctx)
-                    return
+        if &contexts[curr_index - 1] == ctx {
+            if curr_index > 1 {
+                prev := &contexts[curr_index - 1]
+                for i in 0..<len(signals) {
+                    posix.sigaction(signals[i], &ctx.saved[i], &prev.saved[i])
                 }
             }
 
-            curr = ctx.prev
-            free(ctx)
+            curr_index -= 1
         }
     }
 
     throw :: proc "c" (code: Exception_Code) {
+        curr := &contexts[curr_index]
         if curr != nil {
             curr.code = code
             c.longjmp(&curr.jmpbuf, 1)

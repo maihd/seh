@@ -98,9 +98,9 @@ static LONG WINAPI seh__sighandler(EXCEPTION_POINTERS* info)
         break;
     }
 
-    return seh_value != SEH_LEAVE 
-        ? EXCEPTION_CONTINUE_EXECUTION 
-        : EXCEPTION_CONTINUE_SEARCH;
+    return seh_curr && seh_curr->value != SEH_LEAVE 
+        ? EXCEPTION_CONTINUE_EXECUTION              // The system stop handling error filter, return to execution checkpoint.
+        : EXCEPTION_CONTINUE_SEARCH;                // The system continues to search for a handler.
 }
 #else
 #include <signal.h>
