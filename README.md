@@ -7,15 +7,16 @@ Simple and cross-compiler [Structured Exception Handling](https://docs.microsoft
 
 ## Usages
 - Safe native plugins
-- Native code as scripting language. 
+- Native code as scripting language.
 - Safe hot reloading. Example from Mai game [NeonShooter](https://github.com/maihd/neonshooter/tree/odin-raylib)
+> This library is not thread-safe
 
 ## Tested plaforms
 - Windows
 - Linux
 - MacOS
 
-## Examples 
+## Examples
 seh.h:
 ```C
 seh_try (seh) // `seh` is name of SEH context variable
@@ -35,7 +36,7 @@ seh_finally (seh)
 
 seh_lite.h
 ```C
-seh_lite_t ctx; 
+seh_lite_t ctx;
 seh_lite_try (ctx)
 {
     printf("prepare to throw an error\n");
@@ -75,6 +76,9 @@ seh_end(seh);
 printf("Finally of try/catch\n");
 ```
 Now the code are clearly have no used of macros, just functions and statements, we can create bindings now, evenly rewritten on other languages. Let see [Odin port](/seh.odin)
+
+## Better approachs on Windows
+Vectored Exception Handler: https://gist.github.com/mmozeiko/91a698249fdb9ba1c69dd1e0023552ce
 
 ## Acknowledges
 I have firstly read about SEH when exploring native language as scripting from Molecular Musings blog: https://blog.molecular-matters.com/2014/05/10/using-runtime-compiled-c-code-as-a-scripting-language-under-the-hood/
