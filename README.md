@@ -1,6 +1,12 @@
 # Introduction
 Simple and cross-compiler [Structured Exception Handling](https://docs.microsoft.com/en-us/cpp/cpp/structured-exception-handling-c-cpp?view=vs-2019) for C/C++.
 
+## Disclaimer
+> - This library use setjmp/longjmp beneath, it's will be unsured that the your compiler will support it well.
+> - And stack unwind (core mechanic of setjmp), will be stable, work well in most cases, and stack unwind is slow.
+> - I'm founding other approachs, like snapshoting game state, and have crash report.
+> - So I decided archive this repo.
+
 ## Versions
 1. `seh.h`: Exception handler that fully listenning on system signal and custom
 2. `seh_lite.h`: Exception handler without listenning on system signal
@@ -9,11 +15,7 @@ Simple and cross-compiler [Structured Exception Handling](https://docs.microsoft
 - Safe native plugins
 - Native code as scripting language.
 - Safe hot reloading. Example from Mai game [NeonShooter](https://github.com/maihd/neonshooter/tree/odin-raylib)
-> This library is not thread-safe
-> This library use setjmp/longjmp beneath, it's will be unsured that the your compiler will support it well
-> And stack unwind (core mechanic of setjmp), will be stable, work well in most cases, and stack unwind is slow
-> I'm founding other approachs, like snapshoting game state, and have crash report
-> So I decided archive this repo.
+> - This library is not thread-safe.
 
 ## Tested plaforms
 - Windows
